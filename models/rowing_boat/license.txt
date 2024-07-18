@@ -1,0 +1,11 @@
+Model Information:
+* title:	Rowing Boat
+* source:	https://sketchfab.com/3d-models/rowing-boat-4eedc7ec7bac481f957474ecd89f5ba2
+* author:	carlcapu9 (https://sketchfab.com/carlcapu9)
+
+Model License:
+* license type:	CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
+* requirements:	Author must be credited. Commercial use is allowed.
+
+If you use this 3D model in your project be sure to copy paste this credit wherever you share it:
+This work is based on "Rowing Boat" (https://sketchfab.com/3d-models/rowing-boat-4eedc7ec7bac481f957474ecd89f5ba2) by carlcapu9 (https://sketchfab.com/carlcapu9) licensed under CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
