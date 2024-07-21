@@ -2,7 +2,8 @@ import { Vector3 } from "three";
 import * as dat from "dat.gui";
 
 export class PhysicsWorld {
-  constructor() {
+  constructor(initialPosition) {
+    this.position = initialPosition || new Vector3(0, 0, 0);
     this.position = new Vector3(0, 0, 0);
     this.angularVelocity = new Vector3(); // السرعة الزاوية حول المحاور
     this.acceleration = new Vector3();
@@ -168,9 +169,6 @@ export class PhysicsWorld {
       this.velocity.add(this.acceleration.clone().multiplyScalar(deltaTime));
       this.position.add(this.velocity.clone().multiplyScalar(deltaTime));
   
-      // Clamp position to stay within the bounds
-      const halfSkyboxSize = 1700;
-      this.position.clampScalar(-halfSkyboxSize, halfSkyboxSize);
   
       if (this.position.y <= 0) {
         this.velocity.y *= -0.5;
@@ -182,7 +180,6 @@ export class PhysicsWorld {
           endMessage.style.display = "block";
         }
       }
-  
       console.log("Position", this.position);
     }
   }

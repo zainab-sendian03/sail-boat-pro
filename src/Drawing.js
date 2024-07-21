@@ -3,34 +3,25 @@ import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
 import { PhysicsWorld } from "./physicsWorld";
-import { Vector3 } from "three";
 import {
   AmbientLight,
-  BoxGeometry,
-  Mesh,
-  MeshStandardMaterial,
   PerspectiveCamera,
   WebGLRenderer,
+  DirectionalLight,
+  PointLight,
+  SpotLight,
 } from "three";
-import heather_bk from "/src/img/heather_bk.jpg";
-import heather_dn from "/src/img/heather_dn.jpg";
-import heather_ft from "/src/img/heather_ft.jpg";
-import heather_lf from "/src/img/heather_lf.jpg";
-import heather_up from "/src/img/heather_up.jpg";
-import heather_rt from "/src/img/heather_rt.jpg";
+
 
 var physics = new PhysicsWorld();
 var sail;
-var sea;
-var cameraOffset = new Vector3(0, 10, -60); // Adjust camera offset as needed
 var canvas = document.getElementById("scene");
 const scene = new THREE.Scene();
-var camera = new PerspectiveCamera(40, canvas.width / canvas.height, 1, 10000);
+var camera = new PerspectiveCamera(40, canvas.width / canvas.height, 1, 1000000);
 var renderer = new WebGLRenderer({
   canvas,
 });
 const controls = new OrbitControls(camera, renderer.domElement);
-const textureLoader = new THREE.TextureLoader();
 
 const handleWindowResize = () => {
   canvas.width = window.innerWidth;
@@ -44,77 +35,103 @@ const handleWindowResize = () => {
 
 const init = () => {
   controls.enableDamping = true;
-  controls.dampingFactor = 0.05;
+  controls.dampingFactor = 0.02;
   controls.minPolarAngle = Math.PI / 6;
   controls.maxPolarAngle = Math.PI;
-  controls.maxDistance = 10000;
-  camera.position.set(10, 1, -50); // Initial camera position, adjust as needed
+  controls.maxDistance = 1000000;
+  camera.position.set(0, 1000, 1000); 
 
-  var ambientLight = new AmbientLight(0xffffff, 0.7);
+  // Ambient Light
+  var ambientLight = new AmbientLight(0xffffff, 0.8);
   scene.add(ambientLight);
 
-  var sail_boat = new URL("../models/rowing_boat/scene.gltf", import.meta.url);
+  // Directional Light
+  var directionalLight = new DirectionalLight(0xffffff, 1);
+  directionalLight.position.set(20, 30, -10);
+  directionalLight.castShadow = true;
+  directionalLight.shadow.mapSize.width = 2048;
+  directionalLight.shadow.mapSize.height = 2048;
+  directionalLight.shadow.camera.near = 0.5;
+  directionalLight.shadow.camera.far = 500;
+  directionalLight.shadow.camera.left = -50;
+  directionalLight.shadow.camera.right = 50;
+  directionalLight.shadow.camera.top = 50;
+  directionalLight.shadow.camera.bottom = -50;
+  scene.add(directionalLight);
+
+  // Point Light
+  var pointLight = new PointLight(0xffffff, 1.5, 150);
+  pointLight.position.set(50, 50, 50);
+  pointLight.castShadow = true;
+  scene.add(pointLight);
+
+  // Spot Light
+  var spotLight = new SpotLight(0xffffff, 1.2);
+  spotLight.position.set(-50, 50, -50);
+  spotLight.angle = Math.PI / 6;
+  spotLight.penumbra = 0.2;
+  spotLight.decay = 2;
+  spotLight.distance = 200;
+  spotLight.castShadow = true;
+  spotLight.shadow.mapSize.width = 2048;
+  spotLight.shadow.mapSize.height = 2048;
+  scene.add(spotLight);
+
+  var sail_boat = new URL("../models/sailBoat/scene.gltf", import.meta.url);
   var sea_url = new URL("../models/ocean_wave_-__wmaya/scene.gltf", import.meta.url);
+  var sail_url = new URL("../models/sail1/scene.gltf", import.meta.url);
 
   var assetLoader = new GLTFLoader();
 
   assetLoader.load(
     sea_url.href,
     function (gltf) {
-      sea = gltf.scene;
-      scene.add(sea);
-      sea.position.set(0, -2500, 0);
-      sea.scale.set(5000, 1, 5000);
-
+      sail = gltf.scene;
+      scene.add(sail);
+      sail.position.set(0, 0, 0);
+      sail.scale.set(10000, 1, 10000);
 
       assetLoader.load(
         sail_boat.href,
         function (gltf) {
           sail = gltf.scene;
           scene.add(sail);
-          sail.position.set(0, -2400, 0);
-          sail.scale.set(0.1, 0.1, 0.1);
-        },
+          sail.position.set(0,0,0);
+          sail.scale.set(100,100,100);},
+
+
+          assetLoader.load(
+            sail_url.href,
+            function (gltf){
+              sail = gltf.scene;
+              scene.add(sail);
+              sail.position.set(0,20,0);
+              sail.scale.set(20,20, 20);},
+            
+            undefined,
+            function (error) {
+              console.error("Error Loading sail model:", error);
+            },
+          
         undefined,
         function (error) {
           console.error("Error loading sail boat model:", error);
         }
-      );
+          ))
     },
     undefined,
     function (error) {
       console.error("Error loading ocean wave model:", error);
     }
-  );
+  ),
 
-  const textureBK = textureLoader.load(heather_bk);
-  const textureDN = textureLoader.load(heather_dn);
-  const textureFT = textureLoader.load(heather_ft);
-  const textureLF = textureLoader.load(heather_lf);
-  const textureUP = textureLoader.load(heather_up);
-  const textureRT = textureLoader.load(heather_rt);
-
-  const materials = [
-    new MeshStandardMaterial({ map: textureFT, side: THREE.BackSide }),
-    new MeshStandardMaterial({ map: textureBK, side: THREE.BackSide }),
-    new MeshStandardMaterial({ map: textureUP, side: THREE.BackSide }),
-    new MeshStandardMaterial({ map: textureDN, side: THREE.BackSide }),
-    new MeshStandardMaterial({ map: textureRT, side: THREE.BackSide }),
-    new MeshStandardMaterial({ map: textureLF, side: THREE.BackSide }),
-  ];
-
-  const cubeGeometry = new BoxGeometry(5000, 5000, 5000);
-  var cube = new Mesh(cubeGeometry, materials);
-  scene.add(cube);
-
+  
   window.addEventListener("resize", handleWindowResize);
   window.addEventListener("load", handleWindowResize);
-
-  // Add keyboard controls
   window.addEventListener("keydown", onKeyDown);
 };
 
-//  keyboard input
+// Keyboard input
 function onKeyDown(event) {
   switch (event.key) {
     case "ArrowUp":
@@ -140,7 +157,6 @@ function onKeyDown(event) {
   }
 }
 
-// Functions to move the camera
 function moveCameraForward() {
   camera.position.z -= 10; 
 }
@@ -169,11 +185,9 @@ const update = (deltaTime) => {
   physics.update(deltaTime / 1000);
   controls.update();
 
-  if (sail && sea) {
+  if (sail) {
     sail.position.copy(physics.position);
-    sail.position.y = Math.max(sail.position.y, sea.position.y + 0.1);
-    const halfSkyboxSize = 1700;
-    sail.position.clampScalar(-halfSkyboxSize, halfSkyboxSize);
+    sail.position.y = Math.max(sail.position.y, -2400);
   }
 };
 
