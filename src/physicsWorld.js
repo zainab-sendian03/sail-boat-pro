@@ -4,18 +4,13 @@ import * as dat from "dat.gui";
 export class PhysicsWorld {
   constructor(initialPosition) {
     this.position = initialPosition || new Vector3(0, 0, 0);
-    this.angularVelocity = new Vector3(); // Angular velocity around axes
     this.acceleration = new Vector3();
-    this.direction = new Vector3(); // Boat movement direction
     this.velocity = new Vector3();
-    this.movement = new Vector3(); // Movement vector
-    this.angle = new Vector3(); // Angles around axes
     this.windspeedX = 1;
     this.windspeedZ = 1;
     this.windspeed_X = 1;
     this.windspeed_Z = 1;
     this.sailAngle = 0; // Sail angle
-    this.waterResistance = 0; // Water resistance
     this.startSimulation = false;
     this.hasCollided = false;
 
@@ -175,16 +170,6 @@ calculateDragForce() {
         this.velocity.add(this.acceleration.clone().multiplyScalar(deltaTime));
         this.position.add(this.velocity.clone().multiplyScalar(deltaTime));
 
-        if (this.position.y <= 0) {
-            this.velocity.y *= -0.5;
-            this.position.y = 10;
-            this.acceleration.y = 0;
-            this.hasCollided = true;
-            const endMessage = document.getElementById("endMessage");
-            if (endMessage) {
-                endMessage.style.display = "block";
-            }
-        }
         console.log("Position", this.position);
     }
 }
