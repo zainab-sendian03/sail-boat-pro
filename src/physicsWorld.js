@@ -6,11 +6,15 @@ export class PhysicsWorld {
     this.position = initialPosition || new Vector3(0, 0, 0);
     this.acceleration = new Vector3();
     this.velocity = new Vector3();
+    this.angularVelocity = new Vector3();
+    this.angularAcceleration = new Vector3();
+    this.rotationAngle = new Vector3();
     this.windspeedX = 1;
     this.windspeedZ = 1;
     this.windspeed_X = 1;
     this.windspeed_Z = 1;
-    this.sailAngle = 0; // Sail angle
+    this.sailAngle = 0;
+    this.momentOfInertiaY = 1;
     this.startSimulation = false;
     this.hasCollided = false;
 
@@ -19,7 +23,8 @@ export class PhysicsWorld {
     this.gui.add(this, "windspeedZ").min(0).max(1000).step(1).name("windspeedZ ");
     this.gui.add(this, "windspeed_X").min(0).max(1000).step(1).name("windspeed-X ");
     this.gui.add(this, "windspeed_Z").min(0).max(1000).step(1).name("windspeed-Z ");
-    this.gui.add(this, "sailAngle").min(0).max(180).step(1).name("sail angle");
+    this.gui.add(this, "sailAngle").min(-180).max(180).step(1).name("sail angle");
+    this.gui.add(this, "momentOfInertiaY").min(0).max(180).step(1).name("moment Of Inertia");
     this.gui.add(this, "startSimulation").name("start simulation ");
 
     this.constants = {
@@ -39,29 +44,29 @@ export class PhysicsWorld {
   calculateWindForceX() {
     let relativeVelocity = this.velocity.clone();
     relativeVelocity.x += this.windspeedX;
-  
-    let windForce = 0.5 * this.constants.p_air * this.constants.dragArea * Math.pow(relativeVelocity.x, 2);
-  
+
+    let windForce = 0.5 * this.constants.p_air * this.constants.s_sail * Math.pow(relativeVelocity.x, 2)* this.constants.cd;
+
     let windForceVector = new Vector3(windForce, 0, 0);
-  
+
     return windForceVector;
   }
-  
+
   calculateWindForceZ() {
     let relativeVelocity = this.velocity.clone();
     relativeVelocity.z += this.windspeedZ;
-  
-    let windForce = 0.5 * this.constants.p_air * this.constants.dragArea * Math.pow(relativeVelocity.z, 2);
-  
+
+    let windForce = 0.5 * this.constants.p_air * this.constants.s_sail * Math.pow(relativeVelocity.z, 2) * this.constants.cd;
+
     let windForceVector = new Vector3(0, 0, windForce);
-  
+
     return windForceVector;
   }
   calculateWindForce_X() {
     let relativeVelocity = this.velocity.clone();
     relativeVelocity.x += this.windspeed_X;
 
-    let windForce = 0.5 * this.constants.p_air * this.constants.dragArea * Math.pow(relativeVelocity.x, 2);
+    let windForce = 0.5 * this.constants.p_air * this.constants.s_sail * Math.pow(relativeVelocity.x, 2) * this.constants.cd;
 
     let windForceVector = new Vector3(-windForce, 0, 0);
 
@@ -72,7 +77,7 @@ export class PhysicsWorld {
     let relativeVelocity = this.velocity.clone();
     relativeVelocity.z += this.windspeed_Z;
 
-    let windForce = 0.5 * this.constants.p_air * this.constants.dragArea * Math.pow(relativeVelocity.z, 2);
+    let windForce = 0.5 * this.constants.p_air * this.constants.s_sail * Math.pow(relativeVelocity.z, 2) * this.constants.cd;
 
     let windForceVector = new Vector3(0, 0, -windForce);
 
@@ -89,13 +94,13 @@ export class PhysicsWorld {
     let thrustMagnitude = 0.5 * this.constants.p_air * this.constants.s_sail * Math.pow(windSpeed, 2);
 
     let thrustForceVector = new Vector3(
-        thrustMagnitude * Math.cos(sailAngleRad),
-        0,
-        thrustMagnitude * Math.sin(sailAngleRad)
+      thrustMagnitude * Math.cos(sailAngleRad),
+      0,
+      thrustMagnitude * Math.sin(sailAngleRad)
     );
 
     return thrustForceVector;
-}
+  }
 
   calculate_volume() {
     // volume = s * h
@@ -116,15 +121,15 @@ export class PhysicsWorld {
     let weightVector = new Vector3(0, -weightOfBoat, 0);
     return weightVector;
   }
- 
-calculateDragForce() {
-  let relativeVelocity = this.velocity.clone();
-  let dragForce = 0.5 * this.constants.p_water * this.constants.dragArea * Math.pow(relativeVelocity.length(), 2) * this.constants.cd;
 
-  let dragForceVector = relativeVelocity.clone().normalize().multiplyScalar(-dragForce);
+  calculateDragForce() {
+    let relativeVelocity = this.velocity.clone();
+    let dragForce = 0.5 * this.constants.p_water * this.constants.dragArea * Math.pow(relativeVelocity.length(), 2) * this.constants.cd;
 
-  return dragForceVector;
-}
+    let dragForceVector = relativeVelocity.clone().normalize().multiplyScalar(-dragForce);
+
+    return dragForceVector;
+  }
 
   calculate_sigma() {
     // Sigma = Sum Of Forces
@@ -157,20 +162,76 @@ calculateDragForce() {
   }
 
   calculateSailPosition() {
-    // Calculate the new sail position based on the sail angle
     const sailAngleRad = (this.sailAngle * Math.PI) / 180;
-    const sailX = 20 * Math.cos(sailAngleRad);
-    const sailZ = 20 * Math.sin(sailAngleRad);
-    return new Vector3(sailX, 20, sailZ);
+    const sailX = 50 * Math.cos(sailAngleRad);
+    const sailZ = 50 * Math.sin(sailAngleRad);
+    return new Vector3(sailX, 100, sailZ);
   }
 
-  update(deltaTime) {
-    if (this.startSimulation) {
-        this.calculate_acceleration();
-        this.velocity.add(this.acceleration.clone().multiplyScalar(deltaTime));
-        this.position.add(this.velocity.clone().multiplyScalar(deltaTime));
+ 
+  calculateTorqueY() {
+    const sailPosition = this.calculateSailPosition();
+    const windForceX = this.calculateWindForceX().x + this.calculateWindForce_X().x;
+    const windForceZ = this.calculateWindForceZ().z + this.calculateWindForce_Z().z;
+  
+    // حساب العزم حول المحور Y باستخدام القوة وقوة الذراع (المسافة من محور الدوران)
+    const torqueY = sailPosition.z * windForceX - sailPosition.x * windForceZ;
+    return torqueY;
+  }
+  
+  calculateAngularAcceleration() {
+    const torqueY = this.calculateTorqueY();
+    const angularAcceleration = torqueY / this.momentOfInertiaY;
 
-        console.log("Position", this.position);
+    // تحديد قيمة التسارع الزاوي ضمن نطاق معقول
+    const maxAngularAcceleration = 0.05;
+    const minAngularAcceleration = 0.01; // قيمة صغيرة للتوقف عن الدوران
+
+    if (Math.abs(angularAcceleration) < minAngularAcceleration) {
+        this.angularAcceleration.set(0, 0, 0);
+    } else {
+        this.angularAcceleration.set(0, Math.min(Math.max(angularAcceleration, -maxAngularAcceleration), maxAngularAcceleration), 0);
     }
+    return this.angularAcceleration;
+}
+
+update(deltaTime) {
+  if (this.startSimulation) {
+      // حساب التسارع الخطي
+      this.calculate_acceleration();
+      this.velocity.add(this.acceleration.clone().multiplyScalar(deltaTime));
+      this.position.add(this.velocity.clone().multiplyScalar(deltaTime));
+
+      // حساب التسارع الزاوي
+      this.calculateAngularAcceleration();
+      
+      // تحديث سرعة الدوران بانتظام
+      this.angularVelocity.add(this.angularAcceleration.clone().multiplyScalar(deltaTime));
+      
+      // تحديث زاوية الدوران بناءً على سرعة الدوران
+      this.rotationAngle.y += this.angularVelocity.y * deltaTime;
+
+      // التأكد من أن الزاوية بين 0 و 360 درجة
+      this.rotationAngle.y = ((this.rotationAngle.y % 360) + 360) % 360;
+
+      // التأكد من أن القارب لا يدور أكثر من 45 درجة
+      const maxRotationAngle = 45; // زاوية الدوران القصوى
+      if (Math.abs(this.rotationAngle.y) >= maxRotationAngle) {
+          // إيقاف السرعة الزاوية عند بلوغ الزاوية القصوى
+          this.angularVelocity.set(0, 0, 0);
+          this.angularAcceleration.set(0, 0, 0);
+          this.rotationAngle.y = maxRotationAngle * Math.sign(this.rotationAngle.y); // ضبط الزاوية القصوى
+      }
+
+      // التأكد من أن السرعة الزاوية لا تتجاوز الحد الأقصى
+      const maxAngularVelocity = 1;
+      if (Math.abs(this.angularVelocity.y) > maxAngularVelocity) {
+          this.angularVelocity.y = maxAngularVelocity * Math.sign(this.angularVelocity.y);
+      }
+
+      console.log("TorqueY:", this.calculateTorqueY());
+      console.log("AngularAcceleration:", this.calculateAngularAcceleration());
+      console.log("MomentOfInertiaY:", this.momentOfInertiaY);
+  }
 }
 }

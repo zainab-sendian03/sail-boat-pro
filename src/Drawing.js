@@ -198,9 +198,11 @@ const update = (deltaTime) => {
   controls.update();
 
   if (sailBoat) {
+    sailBoat.position.copy(physics.position);  // تحديث موضع القارب
     sailBoat.parent.position.copy(physics.position);
     sailBoat.parent.position.y = Math.max(sailBoat.parent.position.y, -2400);
-
+    sailBoat.rotation.y = physics.rotationAngle.y;
+    
     if (sail) {
       const sailPosition = physics.calculateSailPosition();
       sail.position.set(sailPosition.x, sailPosition.y, sailPosition.z);
