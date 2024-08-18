@@ -214,7 +214,7 @@ export class PhysicsWorld {
         this.angularAcceleration.set(0, 0, 0);
         this.rotationAngle.y = maxRotationAngleRad * Math.sign(this.rotationAngle.y);
       }
-      //this.updateMeshes
+      this.updateMeshes
       
     }
   }
