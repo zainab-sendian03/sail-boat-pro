@@ -1,9 +1,12 @@
-import { Vector3 } from "three";
+import { Vector3, Mesh } from "three";
 import * as dat from "dat.gui";
 
 export class PhysicsWorld {
-  constructor(initialPosition) {
+  constructor(initialPosition, boatMesh, sailMesh) {
     this.position = initialPosition || new Vector3(0, 0, 0);
+    this.boatMesh = boatMesh; // The boat mesh
+    this.sailMesh = sailMesh; // The sail mesh
+
     this.acceleration = new Vector3();
     this.velocity = new Vector3();
     this.angularVelocity = new Vector3();
@@ -45,7 +48,7 @@ export class PhysicsWorld {
     let relativeVelocity = this.velocity.clone();
     relativeVelocity.x += this.windspeedX;
 
-    let windForce = 0.5 * this.constants.p_air * this.constants.s_sail * Math.pow(relativeVelocity.x, 2)* this.constants.cd;
+    let windForce = 0.5 * this.constants.p_air * this.constants.s_sail * Math.pow(relativeVelocity.x, 2) * this.constants.cd;
 
     let windForceVector = new Vector3(windForce, 0, 0);
 
@@ -62,6 +65,7 @@ export class PhysicsWorld {
 
     return windForceVector;
   }
+  
   calculateWindForce_X() {
     let relativeVelocity = this.velocity.clone();
     relativeVelocity.x += this.windspeed_X;
@@ -168,70 +172,60 @@ export class PhysicsWorld {
     return new Vector3(sailX, 100, sailZ);
   }
 
- 
   calculateTorqueY() {
     const sailPosition = this.calculateSailPosition();
     const windForceX = this.calculateWindForceX().x + this.calculateWindForce_X().x;
     const windForceZ = this.calculateWindForceZ().z + this.calculateWindForce_Z().z;
   
-    // حساب العزم حول المحور Y باستخدام القوة وقوة الذراع (المسافة من محور الدوران)
     const torqueY = sailPosition.z * windForceX - sailPosition.x * windForceZ;
     return torqueY;
   }
-  
+
   calculateAngularAcceleration() {
     const torqueY = this.calculateTorqueY();
     const angularAcceleration = torqueY / this.momentOfInertiaY;
 
-    // تحديد قيمة التسارع الزاوي ضمن نطاق معقول
     const maxAngularAcceleration = 0.05;
-    const minAngularAcceleration = 0.01; // قيمة صغيرة للتوقف عن الدوران
+    const minAngularAcceleration = 0.01;
 
     if (Math.abs(angularAcceleration) < minAngularAcceleration) {
-        this.angularAcceleration.set(0, 0, 0);
+      this.angularAcceleration.set(0, 0, 0);
     } else {
-        this.angularAcceleration.set(0, Math.min(Math.max(angularAcceleration, -maxAngularAcceleration), maxAngularAcceleration), 0);
+      this.angularAcceleration.set(0, Math.min(Math.max(angularAcceleration, -maxAngularAcceleration), maxAngularAcceleration), 0);
     }
     return this.angularAcceleration;
-}
+  }
 
-update(deltaTime) {
-  if (this.startSimulation) {
-      // حساب التسارع الخطي
+  update(deltaTime) {
+    if (this.startSimulation) {
       this.calculate_acceleration();
       this.velocity.add(this.acceleration.clone().multiplyScalar(deltaTime));
       this.position.add(this.velocity.clone().multiplyScalar(deltaTime));
 
-      // حساب التسارع الزاوي
       this.calculateAngularAcceleration();
-      
-      // تحديث سرعة الدوران بانتظام
       this.angularVelocity.add(this.angularAcceleration.clone().multiplyScalar(deltaTime));
-      
-      // تحديث زاوية الدوران بناءً على سرعة الدوران
       this.rotationAngle.y += this.angularVelocity.y * deltaTime;
-
-      // التأكد من أن الزاوية بين 0 و 360 درجة
       this.rotationAngle.y = ((this.rotationAngle.y % 360) + 360) % 360;
 
-      // التأكد من أن القارب لا يدور أكثر من 45 درجة
-      const maxRotationAngle = 45; // زاوية الدوران القصوى
-      if (Math.abs(this.rotationAngle.y) >= maxRotationAngle) {
-          // إيقاف السرعة الزاوية عند بلوغ الزاوية القصوى
-          this.angularVelocity.set(0, 0, 0);
-          this.angularAcceleration.set(0, 0, 0);
-          this.rotationAngle.y = maxRotationAngle * Math.sign(this.rotationAngle.y); // ضبط الزاوية القصوى
+      const maxRotationAngle = 45;
+      const maxRotationAngleRad = (maxRotationAngle * Math.PI) / 180;
+      if (Math.abs(this.rotationAngle.y) >= maxRotationAngleRad) {
+        this.angularVelocity.set(0, 0, 0);
+        this.angularAcceleration.set(0, 0, 0);
+        this.rotationAngle.y = maxRotationAngleRad * Math.sign(this.rotationAngle.y);
       }
-
-      // التأكد من أن السرعة الزاوية لا تتجاوز الحد الأقصى
-      const maxAngularVelocity = 1;
-      if (Math.abs(this.angularVelocity.y) > maxAngularVelocity) {
-          this.angularVelocity.y = maxAngularVelocity * Math.sign(this.angularVelocity.y);
-      }
-
-      console.log("TorqueY:", this.calculateTorqueY());
-      console.log("AngularAcceleration:", this.calculateAngularAcceleration());
-      console.log("MomentOfInertiaY:", this.momentOfInertiaY);
+      //this.updateMeshes
+      
+    }
   }
-}
+
+  updateMeshes() {
+    // Update boat mesh position and rotation
+    this.boatMesh.position.copy(this.position);
+    this.boatMesh.rotation.set(this.rotationAngle.x, this.rotationAngle.y, this.rotationAngle.z);
+
+    // Update sail mesh rotation based on sail angle
+    const sailAngleRad = (this.sailAngle * Math.PI) / 180;
+    this.sailMesh.rotation.set(0, sailAngleRad, 0);
+  }
 }
