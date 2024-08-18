@@ -2,10 +2,8 @@ import { Vector3, Mesh } from "three";
 import * as dat from "dat.gui";
 
 export class PhysicsWorld {
-  constructor(initialPosition, boatMesh, sailMesh) {
-    this.position = initialPosition || new Vector3(0, 0, 0);
-    this.boatMesh = boatMesh; // The boat mesh
-    this.sailMesh = sailMesh; // The sail mesh
+  constructor(initialPosition) {
+    this.position = new Vector3(0, 0, 0);
 
     this.acceleration = new Vector3();
     this.velocity = new Vector3();
@@ -18,18 +16,22 @@ export class PhysicsWorld {
     this.windspeed_Z = 1;
     this.sailAngle = 0;
     this.momentOfInertiaY = 1;
+    this.gravity = 9.8;
+    this.mass = 200;
     this.startSimulation = false;
     this.hasCollided = false;
 
     this.gui = new dat.GUI();
-    this.gui.add(this, "windspeedX").min(0).max(1000).step(1).name("windspeedX ");
-    this.gui.add(this, "windspeedZ").min(0).max(1000).step(1).name("windspeedZ ");
-    this.gui.add(this, "windspeed_X").min(0).max(1000).step(1).name("windspeed-X ");
-    this.gui.add(this, "windspeed_Z").min(0).max(1000).step(1).name("windspeed-Z ");
+    this.gui.add(this, "windspeedX").min(0).max(1000).step(1).name("windspeedX");
+    this.gui.add(this, "windspeedZ").min(0).max(1000).step(1).name("windspeedZ");
+    this.gui.add(this, "windspeed_X").min(0).max(1000).step(1).name("windspeed-X");
+    this.gui.add(this, "windspeed_Z").min(0).max(1000).step(1).name("windspeed-Z");
     this.gui.add(this, "sailAngle").min(-180).max(180).step(1).name("sail angle");
     this.gui.add(this, "momentOfInertiaY").min(0).max(180).step(1).name("moment Of Inertia");
-    this.gui.add(this, "startSimulation").name("start simulation ");
-
+    this.gui.add(this, "gravity").min(0).max(9.8).step(1).name("gravity");
+    this.gui.add(this,"mass").min(200).max(1000).step(1).name("mass");
+    this.gui.add(this, "startSimulation").name("start simulation");
+    
     this.constants = {
       gravity: 9.8,
       cd: 0.08,
@@ -115,13 +117,22 @@ export class PhysicsWorld {
   }
 
   calculateBuoyancyForce() {
-    let buoyancyForce = this.constants.p_water * this.constants.gravity * this.calculate_volume();
+    if (this.gravity === 0) {
+      return new Vector3(0, 1000000, 0);
+    }
+    let buoyancyForce = this.constants.p_water * this.gravity * this.calculate_volume();
     let buoyancyForceVector = new Vector3(0, buoyancyForce, 0);
     return buoyancyForceVector;
   }
 
   calculateWeightOfBoat() {
-    let weightOfBoat = this.constants.mass * this.constants.gravity;
+    if (this.gravity === 0) {
+      return new Vector3(0, 1000000, 0);
+    }
+    if(this.mass > 500){
+      return new Vector3(0, -1000000, 0);
+    }
+    let weightOfBoat = this.constants.mass * this.gravity;
     let weightVector = new Vector3(0, -weightOfBoat, 0);
     return weightVector;
   }
@@ -144,13 +155,19 @@ export class PhysicsWorld {
     sigma = sigma.add(this.calculateWindForce_Z());
 
     sigma = sigma.add(this.calculateBuoyancyForce());
-
     sigma = sigma.add(this.calculateWeightOfBoat());
     sigma = sigma.add(this.calculateDragForce());
 
     // Add the thrust force if the sail is present
     if (this.sailAngle !== 0) {
       sigma = sigma.add(this.calculateThrustForce());
+    }
+
+    if (this.gravity === 0) {
+      // Apply a strong upward force to simulate flying
+      // Adjust this force to balance other forces if needed
+      const flyingForce = 1000; // Adjust this value to control flying behavior
+      sigma.y += flyingForce;
     }
 
     return sigma;
@@ -201,25 +218,23 @@ export class PhysicsWorld {
       this.calculate_acceleration();
       this.velocity.add(this.acceleration.clone().multiplyScalar(deltaTime));
       this.position.add(this.velocity.clone().multiplyScalar(deltaTime));
-
-      this.calculateAngularAcceleration();
-      this.angularVelocity.add(this.angularAcceleration.clone().multiplyScalar(deltaTime));
-      this.rotationAngle.y += this.angularVelocity.y * deltaTime;
-      this.rotationAngle.y = ((this.rotationAngle.y % 360) + 360) % 360;
-
-      const maxRotationAngle = 45;
-      const maxRotationAngleRad = (maxRotationAngle * Math.PI) / 180;
-      if (Math.abs(this.rotationAngle.y) >= maxRotationAngleRad) {
-        this.angularVelocity.set(0, 0, 0);
-        this.angularAcceleration.set(0, 0, 0);
-        this.rotationAngle.y = maxRotationAngleRad * Math.sign(this.rotationAngle.y);
-      }
-      this.updateMeshes
-      
     }
   }
 
-  updateMeshes() {
+  updateMeshes(deltaTime) {
+    this.calculateAngularAcceleration();
+    this.angularVelocity.add(this.angularAcceleration.clone().multiplyScalar(deltaTime));
+    this.rotationAngle.y += this.angularVelocity.y * deltaTime;
+    this.rotationAngle.y = ((this.rotationAngle.y % 360) + 360) % 360;
+
+    const maxRotationAngle = 45;
+    const maxRotationAngleRad = (maxRotationAngle * Math.PI) / 180;
+    if (Math.abs(this.rotationAngle.y) >= maxRotationAngleRad) {
+      this.angularVelocity.set(0, 0, 0);
+      this.angularAcceleration.set(0, 0, 0);
+      this.rotationAngle.y = maxRotationAngleRad * Math.sign(this.rotationAngle.y);
+    }
+    
     // Update boat mesh position and rotation
     this.boatMesh.position.copy(this.position);
     this.boatMesh.rotation.set(this.rotationAngle.x, this.rotationAngle.y, this.rotationAngle.z);

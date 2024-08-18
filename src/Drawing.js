@@ -15,7 +15,7 @@ import {
 import * as dat from "dat.gui";
 
 var physics = new PhysicsWorld();
-var sail, sailBoat;
+var sail, sailBoat, boatGroup;
 var canvas = document.getElementById("scene");
 const scene = new THREE.Scene();
 var camera = new PerspectiveCamera(40, canvas.width / canvas.height, 1, 1000000);
@@ -78,8 +78,6 @@ const init = () => {
   spotLight.shadow.mapSize.height = 2048;
   scene.add(spotLight);
 
-
-
   var sail_boat = new URL("../models/sailBoat/scene.gltf", import.meta.url);
   var sea_url = new URL("../models/ocean_wave_-__wmaya/scene.gltf", import.meta.url);
   var sail_url = new URL("../models/sail1/scene.gltf", import.meta.url);
@@ -96,7 +94,7 @@ const init = () => {
       sea.scale.set(10000, 1, 10000);
 
       // sail and boat
-      var boatGroup = new THREE.Group();
+      boatGroup = new THREE.Group();
       scene.add(boatGroup);
 
       //  sailboat 
@@ -109,7 +107,6 @@ const init = () => {
           sailBoat.scale.set(-100, 100, -100);
           const axesHelper = new THREE.AxesHelper(50);
           sailBoat.add(axesHelper);
-        
 
           // sail 
           assetLoader.load(
@@ -197,17 +194,13 @@ const update = (deltaTime) => {
   physics.update(deltaTime / 1000);
   controls.update();
 
-  if (sailBoat) {
-    sailBoat.position.copy(physics.position);  // تحديث موضع القارب
-    sailBoat.parent.position.copy(physics.position);
-    sailBoat.parent.position.y = Math.max(sailBoat.parent.position.y, -2400);
-    sailBoat.rotation.y = physics.rotationAngle.y;
-    
-    if (sail) {
-      const sailPosition = physics.calculateSailPosition();
-      sail.position.set(sailPosition.x, sailPosition.y, sailPosition.z);
-    }
+  if (boatGroup) {
+    boatGroup.position.copy(physics.position);
+    boatGroup.position.y = Math.max(boatGroup.position.y, -3000);
+    boatGroup.rotation.y = physics.rotationAngle.y;
   }
+  const sailPosition = physics.calculateSailPosition();
+  sail.position.set(sailPosition.x, sailPosition.y, sailPosition.z);
 };
 
 const render = () => {
